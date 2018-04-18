@@ -1,0 +1,124 @@
+#install packages
+library(readr)          # easier reading of flat files
+library(dplyr)          # data manipulation functions
+library(tidyr)          # tools for tidy datasets
+library(magrittr)       # ceci n'est pas un pipe
+library(stringr)        # easier manipulation of strings
+library(reshape2)       # a much more flexible reshaping for our purpose here
+library(here)           # easy path location and setting
+
+#read in gathered data
+df = read_csv("/Users/melissamock/Documents/AllViolenceData_171220.csv")
+
+#explore coefficents of interactions with civilian_dead
+ols_interaction <-
+  lm(civilian_dead ~ civilian_wounded +
+       afi*long_guns_seized + 
+       army*long_guns_seized + 
+       navy*long_guns_seized + 
+       federal_police*long_guns_seized +
+       afi*cartridge_sezied + 
+       army*cartridge_sezied + 
+       navy*cartridge_sezied + 
+       federal_police*cartridge_sezied +
+       small_arms_seized + 
+       clips_seized , 
+     data = AllData) 
+summary(ols_interaction) 
+
+#vector of betas
+beta <- coef(ols_interaction) 
+# estimated covariance matrix
+varcov <- as.matrix(vcov(ols_interaction))
+# vector with variances
+var <- diag(vcov(ols_interaction))         
+
+#print beta coefficents 
+beta
+#print variance 
+var
+
+#check to see marginal effect with long guns at 5 in fed police event
+long_guns <- 5
+
+mfx_1 <- as.numeric(beta["federal_police"]) + 
+  as.numeric(beta["long_guns_seized:federal_police"])*long_guns
+
+mfx_1
+
+mfx_1_se <- sqrt(
+  var["federal_police"] + 
+    long_guns^2*var["long_guns_seized:federal_police"] +
+    2*long_guns*varcov["federal_police", "long_guns_seized:federal_police"]
+)
+mfx_1_se
+
+mfx_1_lo_se <- mfx_1 - 1.96* mfx_1_se  # computing a lower bound se
+mfx_1_hi_se <- mfx_1 + 1.96* mfx_1_se  # computing the higher bound se
+
+print(paste0(long_guns, " seized long guns increase the expected number of dead in events that involve the federal police by ",
+             round(mfx_1, 2), " [", round(mfx_1_lo_se, 2), ", ", round(mfx_1_hi_se, 2), "]."
+))
+
+#same as above, change to 24 - trying to get to 1 death
+long_guns2 <- 24
+
+mfx_1 <- as.numeric(beta["federal_police"]) + 
+  as.numeric(beta["long_guns_seized:federal_police"])*long_guns2
+
+mfx_1
+
+mfx_1_se <- sqrt(
+  var["federal_police"] + 
+    long_guns^2*var["long_guns_seized:federal_police"] +
+    2*long_guns*varcov["federal_police", "long_guns_seized:federal_police"]
+)
+mfx_1_se
+
+mfx_1_lo_se <- mfx_1 - 1.96* mfx_1_se  # computing a lower bound se
+mfx_1_hi_se <- mfx_1 + 1.96* mfx_1_se  # computing the higher bound se
+
+print(paste0(long_guns2, " seized long guns increase the expected number of dead in events that involve the federal police by ",
+             round(mfx_1, 2), " [", round(mfx_1_lo_se, 2), ", ", round(mfx_1_hi_se, 2), "]."
+))
+
+#explore effect of no long_arms involved
+long_guns_null <- 0
+
+mfx_2 <- as.numeric(beta["federal_police"]) + 
+  as.numeric(beta["long_guns_seized:federal_police"])*long_guns_null
+mfx_2
+
+mfx_2_se <- sqrt(
+  var["federal_police"] + 
+    long_guns_null^2*var["long_guns_seized:federal_police"] +
+    2*long_guns_null*varcov["federal_police", "long_guns_seized:federal_police"]
+)
+mfx_2_se
+
+mfx_2_lo_se <- mfx_2 - 1.96* mfx_2_se  # computing a lower bound se
+mfx_2_hi_se <- mfx_2 + 1.96* mfx_2_se  # computing the higher bound se
+
+print(paste0(long_guns_null, " seized long guns produce an expected number of dead in events that involve the federal police of ",
+             round(mfx_2, 2), " [", round(mfx_2_lo_se, 2), ", ", round(mfx_2_hi_se, 2), "]."
+))
+
+#explore no cartridges seized
+cartridge_null <- 0
+
+mfx_2 <- as.numeric(beta["federal_police"]) + 
+  as.numeric(beta["cartridge_seized:federal_police"])*cartridge_null
+mfx_2
+
+mfx_2_se <- sqrt(
+    var["federal_police"] + 
+    cartridge_null^2*var["cartridge_seized:federal_police"] +
+    2*cartridge_null*varcov["federal_police", "cartridge_seized:federal_police"])
+mfx_2_se
+
+mfx_2_lo_se <- mfx_2 - 1.96* mfx_2_se  # computing a lower bound se
+mfx_2_hi_se <- mfx_2 + 1.96* mfx_2_se  # computing the higher bound se
+
+print(paste0(cartridge_null, " seized cartridges produce an expected number of dead in events that involve the federal police of ",
+             round(mfx_2, 2), " [", round(mfx_2_lo_se, 2), ", ", round(mfx_2_hi_se, 2), "]."
+))
